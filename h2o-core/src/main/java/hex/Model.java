@@ -37,7 +37,8 @@ public abstract class Model<M extends Model<M,P,O>, P extends Model.Parameters, 
 
   public P _parms;   // TODO: move things around so that this can be protected
   public O _output;  // TODO: move things around so that this can be protected
-  public String[] _warnings = new String[0];
+  public String[] _warnings = new String[0];  // warning associated with model building
+  public String[] _warningsP;     // warnings associated with prediction only
   public Distribution _dist;
   protected ScoringInfo[] scoringInfo;
   public IcedHashMap<Key, String> _toDelete = new IcedHashMap<>();
@@ -83,6 +84,9 @@ public abstract class Model<M extends Model<M,P,O>, P extends Model.Parameters, 
 
   public final boolean isSupervised() { return _output.isSupervised(); }
 
+  public String[] get_warnings() {
+    return _warnings;  // return prediction warnings
+  }
   /**
    * Identifies the default ordering method for models returned from Grid Search
    * @return default sort-by
@@ -390,11 +394,6 @@ public abstract class Model<M extends Model<M,P,O>, P extends Model.Parameters, 
     }
   }
 
-  public void addWarning(String s){
-    _warnings = Arrays.copyOf(_warnings,_warnings.length+1);
-    _warnings[_warnings.length-1] = s;
-  }
-
   /** Model-specific output class.  Each model sub-class contains an instance
    *  of one of these containing its "output": the pieces of the model needed
    *  for scoring.  E.g. KMeansModel has a KMeansOutput extending Model.Output
@@ -506,11 +505,7 @@ public abstract class Model<M extends Model<M,P,O>, P extends Model.Parameters, 
     public double[] _distribution;
     public double[] _modelClassDist;
     public double[] _priorClassDist;
-
-
     protected boolean _isSupervised;
-
-
 
     public boolean isSupervised() { return _isSupervised; }
     /** The name of the response column (which is always the last column). */
@@ -1066,14 +1061,32 @@ public abstract class Model<M extends Model<M,P,O>, P extends Model.Parameters, 
     return score(fr, destination_key, j, true);
   }
 
+  public void addWarning(String s){
+    _warnings = Arrays.copyOf(_warnings,_warnings.length+1);
+    _warnings[_warnings.length-1] = s;
+  }
+
+  public void addWarningP(String s){
+    _warningsP = Arrays.copyOf(_warningsP,_warningsP.length+1);
+    _warningsP[_warningsP.length-1] = s;
+  }
+
   public Frame score(Frame fr, String destination_key, Job j, boolean computeMetrics) throws IllegalArgumentException {
     Frame adaptFr = new Frame(fr);
     computeMetrics = computeMetrics && (!isSupervised() || (adaptFr.vec(_output.responseName()) != null && !adaptFr.vec(_output.responseName()).isBad()));
     String[] msg = adaptTestForTrain(adaptFr,true, computeMetrics);   // Adapt
+    // clean up the previous score warning messages
+    _warningsP = new String[0];
     if (msg.length > 0) {
-      for (String s : msg)
-        Log.warn(s);
+      for (String s : msg) {
+        if (!(this.isSupervised() && s.contains(this._parms._response_column))) {
+          addWarningP(s);                      // add warning string to model
+          Log.warn(s);
+        }
+      }
     }
+
+
     Frame output = predictScoreImpl(fr, adaptFr, destination_key, j, computeMetrics); // Predict & Score
     // Log modest confusion matrices
     Vec predicted = output.vecs()[0]; // Modeled/predicted response

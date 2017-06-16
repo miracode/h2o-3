@@ -368,6 +368,8 @@ class ModelMetricsHandler extends Handler {
           predictions = new Frame(Key.<Frame>make(parms._predictions_name), predictions.names(), predictions.vecs());
           DKV.put(predictions._key, predictions);
         }
+          j.setWarnings(parms._model._warningsP);   // add prediction warning here only
+
         tryComplete();
       }
     };
