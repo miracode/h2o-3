@@ -84,7 +84,7 @@ public abstract class Model<M extends Model<M,P,O>, P extends Model.Parameters, 
 
   public final boolean isSupervised() { return _output.isSupervised(); }
 
-  public String[] get_warnings() {
+  public String[] getWarnings() {
     return _warnings;  // return prediction warnings
   }
   /**

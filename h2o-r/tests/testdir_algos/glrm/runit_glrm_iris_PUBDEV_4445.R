@@ -10,8 +10,6 @@ test.glrm.iris <- function() {
   fitH2O <- h2o.glrm(irisH2O, k = 2, loss = "Quadratic", gamma_x = 0.5, gamma_y = 0.5, transform = "STANDARDIZE",
     impute_original = FALSE)
 
-  browser()
-
   abc = predict(fitH2O, irisTest)
   expect_warning(predict(fitH2O, irisTest))
 }
